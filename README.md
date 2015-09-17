@@ -4,6 +4,7 @@ This library allow access from python 3 to OVH/Hubic file cloud service using th
 
 This developement is based on the initial work of puzzle1536 that can be found at https://github.com/puzzle1536/hubic-wrapper-to-swift
 
+>You will need the ```python-swiftclient``` and ```requests``` additional library
 
 The library request full authentication :
 
