@@ -1,3 +1,5 @@
+## Overview
+
 This library allow access from python 3 to OVH/Hubic file cloud service using the python swiftclient API binding.
 
 The library request full authentication :
@@ -8,7 +10,7 @@ AND
 OR
  - refresh_token if you already got it from a previous user/password authentication
 
-This informations can be supplied when creating the Hubic class instance, at init time, or better supplied as environment parameters : HUBIC_CLIENT_ID, HUBIC_CLIENT_SECRET, HUBIC_USERNAME, HUBIC_PASSWORD, HUBIC_REFRESH_TOKEN
+These informations can be supplied when creating the Hubic class instance, at init time, or better supplied as environment parameters : HUBIC_CLIENT_ID, HUBIC_CLIENT_SECRET, HUBIC_USERNAME, HUBIC_PASSWORD, HUBIC_REFRESH_TOKEN
 
 For details about full use of the swiftclient API, see http://docs.openstack.org/developer/python-swiftclient/
 
@@ -55,3 +57,12 @@ hubic = lhubic.Hubic( client_id="<your client id>", client_Secret="<your client 
                       refresh_token="lkjlkLKLFHLFKLSJLDJLHFKJGKSJHDLKSLDJLFHKJSKJHFKJSKHFKSJFHKJF")
 hubic.os_auth()
 ```
+
+## Examples of swift API bindings
+
+>Note, if your want to be able to access your objects/files using the web interface, your have to place them in the default container created by hubic named "default".
+
+#### Get account information
+
+>>> header, content = hubic.get_account()
+>>> header[""]
