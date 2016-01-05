@@ -34,7 +34,11 @@ $ python3
 'image/png'
 >>> header["content-length"]
 '5135'
->>> # content contains the byte array of the "ubuntu_logo.png" content
+>>> # content contains the byte array of the "ubuntu_logo.png"
+>>> # You can write it to a file with :
+>>> with open("ubuntu_logo.png", "wb") as f: f.write(content)
+>>>
+>>> # Save the content of refresh_token to get access without user/password
 >>> hubic.refresh_token
 'lkjlkLKLFHLFKLSJLDJLHFKJGKSJHDLKSLDJLFHKJSKJHFKJSKHFKSJFHKJF'
 ```
@@ -49,72 +53,82 @@ $ export HUBIC_REFRESH_TOKEN="lkjlkLKLFHLFKLSJLDJLHFKJGKSJHDLKSLDJLFHKJSKJHFKJSK
 
 $ python3
 >>>import lhubic
->>> hubic = lhubic.Hubic()   # You could provide here client_id, client_secret, username, password, refresh_token
->>> hubic.os_auth()          # To get an openstack swift token
+>>> hubic = lhubic.Hubic()
+>>> hubic.os_auth()
 ```
 
-With this method, should the application source be compromised, you have the ability, from you Hubic account to suppress the application credentials that would make any credential embedded in source code unusable and keeping your username/password secret.
+With this method, should the application source be compromised, you have the ability, from you Hubic account, to suppress the application credentials that will make any credential embedded in source code unusable and keep your username/password secret.
 
 Example with credentials embedded in app (therefore not exactly the best possible practice) :
 ```python
-hubic = lhubic.Hubic( client_id="<your client id>", client_Secret="<your client secret>",
-                      refresh_token="lkjlkLKLFHLFKLSJLDJLHFKJGKSJHDLKSLDJLFHKJSKJHFKJSKHFKSJFHKJF")
+hubic = lhubic.Hubic( client_id="<your client id>",
+                      client_Secret="<your client secret>",
+                      refresh_token="<the saved refresh token>")
 hubic.os_auth()
 ```
 
 ## Examples of swift API bindings
 
->Note, if your want to be able to access your objects/files using the web interface, your have to place them in the default container created by hubic named "default".
+>Note, if you want to be able to access your objects using the official OVH web Hubic interface, your have to place them in the default container created by hubic named "default".
+
+You can use as many containers as you want but they will be accessible only through the API.
 
 #### Get account information
 
-Provides some general account information (number of objects stored, bytes used, quota, ...) as well as the list of defined containers.
+Provides some general account information (number of objects stored, bytes used, quota, ...) as well as the list of containers.
 
 ```python
 >>> header, containers = hubic.get_account()
-
-header is a dictionary of meta-data about the account
-content is a list of containers dictionary
+>>> # header is a dictionary of meta-data about the account
+>>> # content is a list of containers dictionary
 
 >>> total_space = int(header["x-account-meta-quota"])
 >>> used_space = int(header["x-account-bytes-used"])
 >>> usage = used_space / total_space
 
 >>> [c["name"] for c in containers]
-['default']
+['default']  # In this case, there is only 1 container in the account, it is the Hubic default
 ```
 
 #### Get a container content list
 
-Container is a flat structure. It is possible to add full path in object names to simulate a usual file system tree structure.
-Getting the list of container content return by default all objects names stored (limited to 10000). You can use ```delimiter``` parameter to limit to first level of virtual directories.
+Container is a flat structure. Objects are identified using a name.  
+It is possible to add delimiters in object names to simulate a usual file system tree structure (eg object name "A/B/C" to simulate an object named C in the subdirectory B of A).  
+Getting the list of container content return by default all objects names stored (limited to 10000). You can use ```delimiter``` parameter to limit to first level of "virtual directories".  
+If you want only object list of one of the virtual subdir, use ```prefix``` to specifiy the "virtual path". Practically, it returns object names starting with the prefix content which could be use in other cases than file system tree emulation.
 
 ```python
 >>> header, objectList = hubic.get_container("default", delimiter="/")
+>>> # header is a dictionary of container properties
+>>> # objectList is a list of dictionaries describing each object at the top container level
+>>> # all object with a / in the object name will not be returned and the virtual
+>>> # directory (first part before /) will be returned as subdir item
 
-Again, header is a dictionary of container properties
-obkectList is a list of dictionaries describing each object at the top container level
-all object with a / in the object name will not be returned and the virtual
-directory will be returned as subdir
-
->>> [(f["name"],f["last_modified"]) for f in objectList if "name" in f]
+>>> # Get the list of "leaf" objects, they alone have a "name" key
+>>> [(f["name"],f["last_modified"]) for f in filter(lambda i: "name" in i, objectList)]
 [('ubuntu_logo.png', '2015-09-17T09:47:23.209850'), ('uploadTest', '2015-09-17T08:31:06.547660')]
-
->>> [f["subdir"] for f in objectList if "subdir" in f]
+>>>
+>>> # Get the list of "virtual subdir", they have a "subdir" key
+>>> [f["subdir"] for f in filter(lambda i: "subdir" in i, objectList)]
 ['python/']
+>>> # NOTE : The delimiter is always part (at end) of the subdir name
+
+>>> # Get the list of the python virtual subdir
+>>> header, objectList = hubic.get_container("default", delimiter="/", prefix="python/")
 ```
 
 #### Put/Get a file
 
-The object name may contain the "/" character like a full pathname of a tree filesystem.
+The object name may contain the "/" character like a full pathname of a tree filesystem (see above).
 
 ```python
->>> # Store a file
+>>> # Store a file (without any virtual directory reference)
 >>> with open("test.png", "rb") as f:
 ...   hubic.put_object("default", "photos/my_copy_of_test.png", f.read())
 'kdfskgdfkJHKFKjfkkjhkj'
 
-The returned value is the id of the object. You could use it to refer to this object in an external system.
+The returned value is the MD5 sum of the object content.
+You could use it to ensure storage sanity checkup for sensitive content.
 
 >>> # Retrieve a file
 >>> stats, content = hubic.get_object("default", "photos/my_copy_of_test.png")
@@ -123,9 +137,16 @@ stats is a directory of usual metadata (date modified, size, content-type, conte
 content is the file content. You can save it ina file with :
 >>> with open("test_copy.png", "wb") as f: f.write(content)
 
-If you have a large file to download and don't want to keep it in memory, use the chunk download
+If you just want file information replace
+get_object with head_object that return only stats
+(usefull to check object size before download for example)
+>>> stats = hubic.head_object("default", "photos/my_copy_of_test.png")
 
->>> stats, reader = hubic.get_object("default", "a_big_object", resp_chunk_size=1048560) # For chunks of 1MB
+>>> # If you have a large file to download and don't want to keep it in memory,
+>>> # use the chunk download
+>>> stats, reader = hubic.get_object("default", "a_big_object",
+>>>                                  resp_chunk_size=1048560) # For chunks of 1MB
+>>> the reader will let you iterate over chunks
 >>> with open("big_object.dat", "wb") as f:
 ...   for chunk in reader: f.write(chunk)
 ```
@@ -135,15 +156,32 @@ If you have a large file to download and don't want to keep it in memory, use th
 Any serializable object (using pickle, json or any other method) can easily be stored.
 
 ```python
->>> myList = [1,2,3,4]
+>>> myList = [1, 2, {"A":1,"B":2}, 4, "Test"]
 
 >>> # Store
 >>> hubic.put_object("default", "python/data/myList", pickle.dumps(myList))
 
 >>> # Retrieve
 >>> header, content = hubic.get_object("default", "python/data/myList")
->>> myList = pickls.loads(content)
+>>> myList = pickle.loads(content)
 >>> myList
-[1,2,3,4]
-```
+[1, 2, {"A":1,"B":2}, 4, "Test"]
 
+>>> # You can do this with serializable classes (very nice)
+>>>
+>>> class People:
+>>>   def __init__(self, firstname, name):
+>>>      self.firstname = firstname
+>>>      self.name = name
+>>>
+>>> Test = People("myFirstName", "myName")
+>>> # Store the class with a name generated from "name" property of the instance
+>>> hubic.put_object("default", "python/data/testPeople/%s" % testPeople.name,
+>>>                  pickle.dumps(testPeople))
+>>> header, content = hubic.get_object("default", "python/data/testPeople/Test")
+>>> result = pickle.loads(content)
+>>> type(result)
+<class '__main__.People'>
+>>> result.__dict__
+{'firstname': 'myFirstName', 'name': 'myName'}
+```
