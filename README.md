@@ -62,14 +62,14 @@ With this method, should the application source be compromised, you have the abi
 Example with credentials embedded in app (therefore not exactly the best possible practice) :
 ```python
 hubic = lhubic.Hubic( client_id="<your client id>",
-                      client_Secret="<your client secret>",
-                      refresh_token="<the saved refresh token>")
+...                   client_Secret="<your client secret>",
+...                   refresh_token="<the saved refresh token>")
 hubic.os_auth()
 ```
 
 ## Access to OVH Hubic API
 
-if you just want to use the OVH Hubic API, you don't need to authenticate using os_auth(). You can request GET/POST/DELETE to the hubic API with hubic_get / hubic_post / hubic_delete methods of your hubic instance.  
+You can request GET/POST/DELETE to the hubic API with hubic_get / hubic_post / hubic_delete methods of your hubic instance.  
 Using the json() method on the result directly return a dictionary from the json response.  
 
 Check the OVH Hubic API at : https://api.hubic.com/console/
@@ -103,7 +103,7 @@ Provides some general account information (number of objects stored, bytes used,
 ['default']  # In this case, there is only 1 container in the account, it is the Hubic default
 ```
 
-#### Get a container content list
+#### Get a container content list, create additionals containers
 
 Container is a flat structure. Objects are identified using a name.  
 It is possible to add delimiters in object names to simulate a usual file system tree structure (eg object name "A/B/C" to simulate an object named C in the subdirectory B of A).  
@@ -128,6 +128,11 @@ If you want only object list of one of the virtual subdir, use ```prefix``` to s
 
 >>> # Get the list of the python virtual subdir
 >>> header, objectList = hubic.get_container("default", delimiter="/", prefix="python/")
+
+>>> # Create a new container
+>>> hubic.put_container("myNewContainer")
+>>> # Eventually remove it
+>>> hubic.delete_container("myNewContainer")
 ```
 
 #### Put/Get a file
@@ -159,10 +164,13 @@ If you have a large file to download and don't want to keep it in memory,
 use the chunk download
 
 >>> stats, reader = hubic.get_object("default", "a_big_object",
->>>                                  resp_chunk_size=1048560) # For chunks of 1MB
+...                                  resp_chunk_size=1048560) # For chunks of 1MB
 >>> # the reader is a generator that will let you iterate over chunks
 >>> with open("big_object.dat", "wb") as f:
 ...   for chunk in reader: f.write(chunk)
+
+If you want to get ride of an object :
+>>> hubic.delete_object("default", "a_big_object")
 ```
 
 #### Directe store a serializable python object
@@ -184,14 +192,14 @@ Any serializable object (using pickle, json or any other method) can easily be s
 >>> # You can do this with serializable classes (very nice)
 >>>
 >>> class People:
->>>   def __init__(self, firstname, name):
->>>      self.firstname = firstname
->>>      self.name = name
+...   def __init__(self, firstname, name):
+...      self.firstname = firstname
+...      self.name = name
 >>>
 >>> Test = People("myFirstName", "myName")
 >>> # Store the class with a name generated from "name" property of the instance
 >>> hubic.put_object("default", "python/data/testPeople/%s" % testPeople.name,
->>>                  pickle.dumps(testPeople))
+...                  pickle.dumps(testPeople))
 >>>
 >>> # You now want to retrieve the People instance with name "myName"
 >>> header, content = hubic.get_object("default", "python/data/testPeople/myName")
