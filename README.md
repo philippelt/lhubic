@@ -67,6 +67,19 @@ hubic = lhubic.Hubic( client_id="<your client id>",
 hubic.os_auth()
 ```
 
+## Access to OVH Hubic API
+
+if you just want to use the OVH Hubic API, you don't need to authenticate using os_auth(). You can request GET/POST/DELETE to the hubic API with hubic_get / hubic_post / hubic_delete methods of your hubic instance.  
+Using the json() method on the result directly return a dictionary from the json response.  
+
+Check the OVH Hubic API at : https://api.hubic.com/console/
+
+Exemple
+```python
+>>> result = hubic.hubic_get("/account/credentials").json()
+>>> targetUrl = result["endpoint"]
+```
+
 ## Examples of swift API bindings
 
 >Note, if you want to be able to access your objects using the official OVH web Hubic interface, your have to place them in the default container created by hubic named "default".
