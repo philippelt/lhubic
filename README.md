@@ -122,10 +122,10 @@ If you want only object list of one of the virtual subdir, use ```prefix``` to s
 The object name may contain the "/" character like a full pathname of a tree filesystem (see above).
 
 ```python
->>> # Store a file (without any virtual directory reference)
+>>> # Store the content of a local file
 >>> with open("test.png", "rb") as f:
 ...   hubic.put_object("default", "photos/my_copy_of_test.png", f.read())
-'kdfskgdfkJHKFKjfkkjhkj'
+'<md5 sum of the stored content>'
 
 The returned value is the MD5 sum of the object content.
 You could use it to ensure storage sanity checkup for sensitive content.
@@ -134,7 +134,7 @@ You could use it to ensure storage sanity checkup for sensitive content.
 >>> stats, content = hubic.get_object("default", "photos/my_copy_of_test.png")
 
 stats is a directory of usual metadata (date modified, size, content-type, content-length)
-content is the file content. You can save it ina file with :
+content is the file content. You can save it in a file with :
 >>> with open("test_copy.png", "wb") as f: f.write(content)
 
 If you just want file information replace
@@ -142,11 +142,12 @@ get_object with head_object that return only stats
 (usefull to check object size before download for example)
 >>> stats = hubic.head_object("default", "photos/my_copy_of_test.png")
 
->>> # If you have a large file to download and don't want to keep it in memory,
->>> # use the chunk download
+If you have a large file to download and don't want to keep it in memory,
+use the chunk download
+
 >>> stats, reader = hubic.get_object("default", "a_big_object",
 >>>                                  resp_chunk_size=1048560) # For chunks of 1MB
->>> the reader will let you iterate over chunks
+>>> # the reader is a generator that will let you iterate over chunks
 >>> with open("big_object.dat", "wb") as f:
 ...   for chunk in reader: f.write(chunk)
 ```
@@ -178,7 +179,9 @@ Any serializable object (using pickle, json or any other method) can easily be s
 >>> # Store the class with a name generated from "name" property of the instance
 >>> hubic.put_object("default", "python/data/testPeople/%s" % testPeople.name,
 >>>                  pickle.dumps(testPeople))
->>> header, content = hubic.get_object("default", "python/data/testPeople/Test")
+>>>
+>>> # You now want to retrieve the People instance with name "myName"
+>>> header, content = hubic.get_object("default", "python/data/testPeople/myName")
 >>> result = pickle.loads(content)
 >>> type(result)
 <class '__main__.People'>
