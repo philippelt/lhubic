@@ -1,3 +1,13 @@
+# IMPORTANT WARNING
+
+Despite using a paid account, I always experienced a lot of failures at upload but, for two weeks, it seems that the failure rate is reaching 100%. **Worst, the service is silently corrupting your data** uploading without warning truncated data (normally, an exception occurs when the transfert can't complete) -> MD5 check is becoming mandatory you can no longer rely on exception.
+
+Many angry users are requesting help at OVH Hubic forums (https://forums.hubic.com) but OVH doesn't answer to support request nor communicate about any plan to increase service quality. Despite these major failures, paid service subscription seems to be still open !
+
+This service is a bargain in terms of price per TB ratio and that justify some of the limitations (like huge bandwith limitation) but, if you have no guarantee to be able to recover anything you send into the service, the service has in fact no value.
+
+Thats why I recommend to use other providers services, or at least **do not send in Hubic anything you are not ready to loose**, until there is a clear statment from OVH about the current issues and the futur of the service. If you subscribe to the 10TB plan, remember that, with bandwith limitations, you will need a lot of MONTHS (downloading 24 hours a day) just to get back your stored data (if it works).
+
 ## Overview
 
 This library allow access from python 3 to OVH/Hubic file cloud service using the python swiftclient API binding.
