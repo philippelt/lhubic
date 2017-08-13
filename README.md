@@ -19,14 +19,14 @@ These informations can be supplied when creating the Hubic class instance, at in
 For details about full use of the swiftclient API, see http://docs.openstack.org/developer/python-swiftclient/
 
 Usage example :
-```
+```python
 $ export HUBIC_CLIENT_ID="<your client id>"
 $ export HUBIC_CLIENT_SECRET="<your client secret>"
 $ export HUBIC_USERNAME="<your hubic account login>"
 $ export HUBIC_PASSWORD="<your hubic account password>"
 
 $ python3
->>>import lhubic
+>>> import lhubic
 >>> hubic = lhubic.Hubic()   # You could provide here client_id, client_secret, username, password, refresh_token
 >>> hubic.os_auth()          # To get an openstack swift token
 >>> header, content = hubic.get_object("default", "ubuntu_logo.png")
@@ -39,22 +39,22 @@ $ python3
 >>> with open("ubuntu_logo.png", "wb") as f: f.write(content)
 >>>
 >>> # Save the content of refresh_token to get access without user/password
->>> hubic.refresh_token
-'lkjlkLKLFHLFKLSJLDJLHFKJGKSJHDLKSLDJLFHKJSKJHFKJSKHFKSJFHKJF'
+>>> with open("~/.hubic_token", wb) as f: f.write(hubic.refresh_token)
 ```
 
 Note that once you have successfully authenticate with your username and password, you can save the ```hubic.refresh_token``` for a future connection : it will no longer be necessary to supply username and password, just the refresh_token in place.
 
 example :
-```
+```python
 $ export HUBIC_CLIENT_ID="<your client id>"
 $ export HUBIC_CLIENT_SECRET="<your client secret>"
-$ export HUBIC_REFRESH_TOKEN="lkjlkLKLFHLFKLSJLDJLHFKJGKSJHDLKSLDJLFHKJSKJHFKJSKHFKSJFHKJF"
+$ export HUBIC_REFRESH_TOKEN="<refresh token content>"
 
 $ python3
->>>import lhubic
+>>> import lhubic
 >>> hubic = lhubic.Hubic()
 >>> hubic.os_auth()
+>>> header, content = hubic.get_object("default", "ubuntu_logo.png")
 ```
 
 With this method, should the application source be compromised, you have the ability, from you Hubic account, to suppress the application credentials that will make any credential embedded in source code unusable and keep your username/password secret.
@@ -84,7 +84,7 @@ Exemple
 
 >Note, if you want to be able to access your objects using the official OVH web Hubic interface, your have to place them in the default container created by hubic named "default".
 
-You can use as many containers as you want but they will be accessible only through the API.
+You can use as many other containers as you want but they will be accessible only through the API. It is usefull to 'hide' content from web browser or hubic app and to deal with the limit of 10k objects limit in list retrieval.
 
 #### Get account information
 
@@ -145,34 +145,32 @@ The object name may contain the "/" character like a full pathname of a tree fil
 ...   hubic.put_object("default", "photos/my_copy_of_test.png", f.read())
 '<md5 sum of the stored content>'
 
-The returned value is the MD5 sum of the object content.
-You could use it to ensure storage sanity checkup for sensitive content.
+>>> # The returned value is the MD5 sum of the object content.
+>>> # You could use it to ensure storage sanity checkup for sensitive content.
 
 >>> # Retrieve a file
 >>> stats, content = hubic.get_object("default", "photos/my_copy_of_test.png")
-
-stats is a directory of usual metadata (date modified, size, content-type, content-length)
-content is the file content. You can save it in a file with :
+>>> # stats is a directory of usual metadata (date modified, size, content-type, content-length)
+>>> # content is the file content. You can save it in a file with :
 >>> with open("test_copy.png", "wb") as f: f.write(content)
 
-If you just want file information replace
-get_object with head_object that return only stats
-(usefull to check object size before download for example)
+>>> # If you just want file information replace
+>>> # get_object with head_object that return only stats
+>>> # usefull to check object size before download for example)
 >>> stats = hubic.head_object("default", "photos/my_copy_of_test.png")
 
-If you have a large file to download and don't want to keep it in memory,
-use the chunk download
-
+>>> # If you have a large file to download and don't want to keep it in memory,
+>>> # use the chunk download
 >>> stats, reader = hubic.get_object("default", "a_big_object",
 ...                                  resp_chunk_size=1048560) # For chunks of 1MB
 >>> # the reader is a generator that will let you iterate over chunks
 >>> with open("big_object.dat", "wb") as f:
 ...   for chunk in reader: f.write(chunk)
 
-Despite swift supporting chunk upload, it seems to systematcaly fail if attempted on hubic.
-I suggest manualy managing chunks (by splitting object files if they are too big).
+>>> # Despite swift supporting chunk upload, it seems to systematcaly fail if attempted on hubic.
+>>> # I suggest manualy managing chunks (by splitting object files if they are too big).
 
-If you want to get ride of an object :
+>>> # If you want to delete an object :
 >>> hubic.delete_object("default", "a_big_object")
 ```
 
@@ -199,9 +197,10 @@ Any serializable object (using pickle, json or any other method) can easily be s
 ...      self.firstname = firstname
 ...      self.name = name
 >>>
->>> Test = People("myFirstName", "myName")
+>>> testPeople = People("myFirstName", "myName")
 >>> # Store the class with a name generated from "name" property of the instance
->>> hubic.put_object("default", "python/data/testPeople/%s" % testPeople.name,
+>>> hubic.put_object("default",
+...                  "python/data/testPeople/%s" % testPeople.name,
 ...                  pickle.dumps(testPeople))
 >>>
 >>> # You now want to retrieve the People instance with name "myName"
