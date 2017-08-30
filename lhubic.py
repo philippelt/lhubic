@@ -124,8 +124,8 @@ class Hubic(swiftclient.client.Connection):
             log.debug("auth: Access grant : %s" % r.status_code)
 
             try:
-                location = urlparse(r.headers['location'])
-                self.oauth_code = dict(parse_qsl(location.query))['code']
+                location = urlparse(r.headers.get('location', ''))
+                self.oauth_code = dict(parse_qsl(location.query)).get('code', '')
             except Exception as e:
                 log.error("Authorization code (user) request failure : %s" % e)
                 raise HubicAuthFailure("Failed to request authorization code, check user/password")
@@ -142,10 +142,10 @@ class Hubic(swiftclient.client.Connection):
                 raise HubicTokenFailure("%s : %s" % (r.json()['error'], r.json()['error_description']))
 
             try:
-                self.refresh_token = r.json()['refresh_token']
-                self.access_token  = r.json()['access_token']
-                self.token_expire  = time() + r.json()['expires_in']
-                self.token_type    = r.json()['token_type']
+                self.refresh_token = r.json().get('refresh_token', '')
+                self.access_token = r.json().get('access_token', '')
+                self.token_expire = time() + r.json().get('expires_in', '')
+                self.token_type = r.json().get('token_type', '')
 
             except Exception as e :
                 log.error("Token request parse failure : %s / %s" % (r.content, e))
