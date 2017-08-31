@@ -1,16 +1,59 @@
 from os import getenv
 from re import search
-from urllib.parse import parse_qsl, urlparse
-from urllib.parse import urlencode
-from getpass import getpass
-from stat import S_IRUSR, S_IWUSR
-from time import sleep, time, strptime, mktime, strftime, localtime, timezone
+from time import sleep, time, mktime # , strftime, localtime, timezone
 import logging
 import json
 from logging import getLogger
 
 from requests import Session
 import swiftclient
+from sys import version_info
+PYTHON_VERSION = version_info.major
+IS_PYTHON2 = PYTHON_VERSION == 2
+IS_PYTHON3 = PYTHON_VERSION == 3
+if IS_PYTHON2:
+    from urlparse import parse_qsl, urlparse
+    from urllib import urlencode
+    from datetime import datetime, timedelta, tzinfo
+
+
+    class FixedOffset(tzinfo):
+        """Fixed offset in minutes: `time = utc_time + utc_offset`."""
+    
+        def __init__(self, offset):
+            self.__offset = timedelta(minutes=offset)
+            hours, minutes = divmod(offset, 60)
+            # NOTE: the last part is to remind about deprecated POSIX GMT+h timezones
+            #  that have the opposite sign in the name;
+            #  the corresponding numeric value is not used e.g., no minutes
+            self.__name = '<%+03d%02d>%+d' % (hours, minutes, -hours)
+    
+        def utcoffset(self, dt=None):
+            return self.__offset
+    
+        def tzname(self, dt=None):
+            return self.__name
+    
+        def dst(self, dt=None):
+            return timedelta(0)
+    
+        def __repr__(self):
+            return 'FixedOffset(%d)' % (self.utcoffset().total_seconds() / 60)
+    
+    def strptime(t, time_format='%Y-%m-%dT%H:%M:%S'):
+        ret = datetime.strptime(t[0:19], time_format)
+        tz_h = int(t[20:22])
+        tz_m = int(t[22:])
+        tz_op = t[19]
+        is_plus = tz_op == '+'
+        delta = timedelta(hours=tz_h, minutes=tz_m)
+        ret += -delta if is_plus else delta
+        offset = tz_h * 60 + tz_m
+        dt = ret.replace(tzinfo=FixedOffset(offset))
+        return dt.timetuple()
+else:
+    from urllib.parse import parse_qsl, urlparse, urlencode
+    from time import strptime
 
 
 REDIRECT_URI  = "http://localhost:8080/"
@@ -75,7 +118,8 @@ class Hubic(swiftclient.client.Connection):
         log.debug("os_auth: Auth token : %s" % r.get("token", ''))
         self.os_storage_url = r.get("endpoint", '')
         exp_time = r.get("expires", '')
-        self.os_token_expire = mktime(strptime(exp_time[:22]+exp_time[23:], "%Y-%m-%dT%H:%M:%S%z"))
+        time_format = "%Y-%m-%dT%H:%M:%S%z" if IS_PYTHON3 else "%Y-%m-%dT%H:%M:%S"
+        self.os_token_expire = mktime(strptime(exp_time[:22]+exp_time[23:], time_format))
         super(Hubic, self).__init__(preauthurl=self.os_storage_url, preauthtoken=self.os_auth_token, timeout=10)
 
     def auth(self):
