@@ -44,8 +44,7 @@ class HubicAccessFailure(Exception):
 
 
 class Hubic(swiftclient.client.Connection):
-    def __init__(self, client_id=None, client_secret=None, username=None,
-                 password=None, refresh_token=None):
+    def __init__(self, client_id=None, client_secret=None, username=None, password=None, refresh_token=None):
 
         self.client_id       = client_id or getenv("HUBIC_CLIENT_ID")
         self.client_secret   = client_secret or getenv("HUBIC_CLIENT_SECRET")
@@ -214,20 +213,21 @@ class Hubic(swiftclient.client.Connection):
     
             try:
                 # Check if token is still valid
-                if r.status_code == 401 and r.json().get('error', '') == 'invalid_token' and r.json().get(
-                      'error_description', '') == 'expired':
+                status_code = r.status_code
+                error = r.json().get('error', '')
+                error_description = r.json().get('error_description', '')
+                if status_code == 401 and error == 'invalid_token' and error_description == 'expired':
                     # Try to renew if possible
                     self.refresh()
                     r = operation(hubic_url, *args, **kwargs)
         
-                if r.status_code == 404 or r.status_code == 500:
-                    log.error("Hubic API error : %s" % r.status_code)
-                    raise HubicAccessFailure("%s : %s" % (r.json().get('error', ''), r.json().get('message', '')))
+                if status_code == 404 or status_code == 500:
+                    log.error("Hubic API error : %s" % status_code)
+                    raise HubicAccessFailure("%s : %s" % (error, r.json().get('message', '')))
         
-                if r.status_code != 200:
-                    log.error("Hubic API error : %s" % r.status_code)
-                    raise HubicAccessFailure("%s : %s" % (r.json().get('error', ''), r.json().get(
-                        'error_description', '')))
+                if status_code != 200:
+                    log.error("Hubic API error : %s" % status_code)
+                    raise HubicAccessFailure("%s : %s" % (error, error_description))
     
             except Exception as e:
                 log.error("Hubic API exception %s" % e)
