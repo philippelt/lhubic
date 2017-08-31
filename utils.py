@@ -1,3 +1,4 @@
+from __future__ import print_function
 import time
 import logging
 from os.path import isfile, getsize, basename

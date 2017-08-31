@@ -1,8 +1,11 @@
-#!/usr/bin/python3
-
+#!/usr/bin/python2
+from __future__ import print_function
 import lhubic
 from utils import *
+from concurrent.futures import ThreadPoolExecutor
 # from swiftclient.exceptions import ClientException
+# clem 31/08/2017
+
 
 HUBIC_TOKEN_FILE = '.hubic_token'
 HUBIC_CLIENT_ID = get_key('hubic_api_id')
@@ -129,7 +132,6 @@ class HubicClient(object):
 			total_size_str = human_readable_byte_size(total_size)
 			with open(local_file_path, 'rb') as f:
 				from time import sleep
-				from concurrent.futures import ThreadPoolExecutor
 				i = 0.
 				interval = .25 # refresh interval
 				io_timeout = (total_size / _100_KiBi) / interval # Timeout based on 100KiBi/s transfer speed
@@ -139,7 +141,7 @@ class HubicClient(object):
 					log.debug('uploading %s %s to %s' % (local_file_path, total_size_str, remote_file_path))
 					while not future.done():
 						read_position = f.tell()
-						progress = (read_position / total_size) * 100
+						progress = (read_position / float(total_size)) * 100.
 						elapsed = time.time() - start
 						if read_position < total_size:
 							current_speed_avg = human_readable_byte_size(int(read_position / elapsed))
@@ -163,15 +165,9 @@ class HubicClient(object):
 			if isfile(local_file_path):
 				raise FileExistsError('File %s exist. For safety files will not be overwritten' % local_file_path)
 			with open(local_file_path, 'wb') as f:
-				# from time import sleep
-				from concurrent.futures import ThreadPoolExecutor
-				# i = 0.
-				# interval = .25 # refresh interval
-				# io_timeout = (total_size / _100_KiBi) / interval # Timeout based on 100KiBi/s transfer speed
 				with ThreadPoolExecutor(max_workers=1) as executor:
 					temp = dict()
 					future = executor.submit(self.hubic.get_object, container, remote_file_path, response_dict=temp)
-					# start = time.time()
 					log.debug('downloading %s %s to %s' % (remote_file_path, total_size_str, local_file_path))
 					
 					header, content = future.result()
@@ -205,7 +201,7 @@ select_container = 'default'
 local_path = 'upload.deb'
 target_path = 'test/%s' % basename(local_path)
 print(my_hubic.hubic.head_object(select_container, target_path))
-# my_hubic.download(container, local_path, target_path)
-# my_hubic.upload(container, local_path, target_path)
+my_hubic.download(select_container, local_path, target_path)
+my_hubic.upload(select_container, local_path, target_path)
 
 # my_hubic.download(container, '_%s' % local_path, 'target_path')
