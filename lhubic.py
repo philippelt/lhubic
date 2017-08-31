@@ -199,107 +199,48 @@ class Hubic(swiftclient.client.Connection):
             raise HubicTokenFailure("refresh_token status %s/%s" % (r.status_code, r.content))
 
         self.session.headers['Authorization'] = "Bearer " + self.access_token
-
-    def hubic_get(self, hubic_api):
-
+    
+    def __operation_wrapper(self, hubic_api, operation, *args, **kwargs):
+        assert callable(operation)
+        
         hubic_url = HUBIC_API_URL + hubic_api
 
         if self.access_token:
-
+    
             if self.token_expire <= time():
                 self.refresh()
-            
-            r = self.session.get(hubic_url, timeout=TIMEOUT)
-
+    
+            r = operation(hubic_url, *args, **kwargs)
+    
             try:
                 # Check if token is still valid
                 if r.status_code == 401 and r.json().get('error', '') == 'invalid_token' and r.json().get(
-                  'error_description', '') == 'expired':
+                      'error_description', '') == 'expired':
                     # Try to renew if possible
                     self.refresh()
-                    r = self.session.get(hubic_url, timeout=TIMEOUT)
-
+                    r = operation(hubic_url, *args, **kwargs)
+        
                 if r.status_code == 404 or r.status_code == 500:
                     log.error("Hubic API error : %s" % r.status_code)
                     raise HubicAccessFailure("%s : %s" % (r.json().get('error', ''), r.json().get('message', '')))
-
+        
                 if r.status_code != 200:
                     log.error("Hubic API error : %s" % r.status_code)
                     raise HubicAccessFailure("%s : %s" % (r.json().get('error', ''), r.json().get(
-                      'error_description', '')))
-
+                        'error_description', '')))
+    
             except Exception as e:
                 log.error("Hubic API exception %s" % e)
                 raise HubicAccessFailure
-
-            return r
-
-    def hubic_post(self, hubic_api, data):
-
-        hubic_url = HUBIC_API_URL + hubic_api
-
-        if self.access_token:
-
-            if self.token_expire <= time():
-                self.refresh()
-
-            headers = {'content-type': 'application/x-www-form-urlencoded'}
-
-            r = self.session.post(hubic_url, data=data, headers=headers, timeout=TIMEOUT)
-
-            try:
-                # Check if token is still valid
-                if r.status_code == 401 and r.json().get('error', '') == 'invalid_token' and r.json().get(
-                  'error_description', '') == 'expired':
-                    # Try to renew if possible
-                    self.refresh()
-                    r = self.session.post(hubic_url, data=data, headers=headers, timeout=TIMEOUT)
-
-                if r.status_code == 404 or r.status_code == 500:
-                    log.error("Hubic API error : %s" % r.status_code)
-                    raise HubicAccessFailure("%s : %s" % (r.json().get('error', ''), r.json().get('message', '')))
-
-                if r.status_code != 200:
-                    log.error("Hubic API error : %s" % r.status_code)
-                    raise HubicAccessFailure("%s : %s" % (r.json().get('error', ''), r.json().get(
-                      'error_description', '')))
-
-            except Exception as e:
-                log.error("Hubic API exception %s" % e)
-                raise HubicAccessFailure
-
+    
             return r
     
+    def hubic_get(self, hubic_api):
+        return self.__operation_wrapper(hubic_api, self.session.get, timeout=TIMEOUT)
+
+    def hubic_post(self, hubic_api, data):
+        headers = {'content-type': 'application/x-www-form-urlencoded'}
+        return self.__operation_wrapper(hubic_api, self.session.post, data=data, headers=headers, timeout=TIMEOUT)
+    
     def hubic_delete(self, hubic_api):
-
-        hubic_url = HUBIC_API_URL + hubic_api
-
-        if self.access_token:
-
-            if self.token_expire <= time():
-                self.refresh()
-
-            r = self.session.delete(hubic_url, timeout=TIMEOUT)
-
-            try:
-                # Check if token is still valid
-                if r.status_code == 401 and r.json().get('error', '') == 'invalid_token' and r.json().get(
-                  'error_description', '') == 'expired':
-                    # Try to renew if possible
-                    self.refresh()
-                    r = self.session.delete(hubic_url, timeout=TIMEOUT)
-
-                if r.status_code == 404 or r.status_code == 500:
-                    log.error("Hubic API error : %s" % r.status_code)
-                    raise HubicAccessFailure("%s : %s" % (r.json().get('error', ''), r.json().get('message', '')))
-
-                if r.status_code != 200:
-                    log.error("Hubic API error : %s" % r.status_code)
-                    raise HubicAccessFailure("%s : %s" % (r.json().get('error', ''), r.json().get(
-                      'error_description', '')))
-
-            except Exception as e:
-                log.error("Hubic API exception %s" % e)
-                raise HubicAccessFailure
-
-            return r
+        return self.__operation_wrapper(hubic_api, self.session.delete, timeout=TIMEOUT)
