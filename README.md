@@ -1,3 +1,12 @@
+# ARCHIVED
+
+**The OVH HUbic service will no longer allow any new subscription** and the existing users may continue to use the service but as far as I can see, performances that always were poor are going worst (obviously it was possible 😳)
+
+As a consequence, this library will no longer be maintained.
+
+To all people looking for object storage API, but could go on premise, I suggest to have a look at the minio project (https://github.com/minio/minio). It allows you to implement your own object storage engine on any server with a Swift/S3 compatible API.
+
+
 ## Overview
 
 This library allow access from python 3 to OVH/Hubic file cloud service using the python swiftclient API binding.
